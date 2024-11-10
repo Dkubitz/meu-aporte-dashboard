@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Aportes SCP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Cabeçalho -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Análise de Aportes SCP</h1>
+            <p class="text-gray-600">Taxa de juros: 0,85% ao mês</p>
+        </div>
+
+        <!-- Resumo -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2">Total de Aportes</h3>
+                <p class="text-3xl font-bold text-blue-600" id="totalAportes"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2">Total de Juros</h3>
+                <p class="text-3xl font-bold text-green-600" id="totalJuros"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2">Montante Total</h3>
+                <p class="text-3xl font-bold text-indigo-600" id="montanteTotal"></p>
+            </div>
+        </div>
+
+        <!-- Gráfico de Evolução -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Evolução dos Aportes e Juros</h2>
+            <div class="h-96">
+                <canvas id="evolucaoChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tabela Detalhada -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Detalhamento dos Aportes</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Aporte</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Meses</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Juros</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montante</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aportesTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const aportes = [
+            { data: '04/04/2019', valor: 100000.00, meses: 67, juros: 76313.46, montante: 176313.46 },
+            { data: '16/07/2020', valor: 20000.00, meses: 52, juros: 11058.25, montante: 31058.25 },
+            { data: '21/01/2021', valor: 20000.00, meses: 46, juros: 9520.35, montante: 29520.35 },
+            { data: '25/04/2021', valor: 20000.00, meses: 43, juros: 8780.20, montante: 28780.20 },
+            { data: '26/05/2021', valor: 14400.00, meses: 42, juros: 6147.09, montante: 20547.09 },
+            { data: '30/06/2021', valor: 50000.00, meses: 41, juros: 20742.76, montante: 70742.76 },
+            { data: '08/09/2021', valor: 50000.00, meses: 38, juros: 18969.06, montante: 68969.06 },
+            { data: '23/01/2022', valor: 80000.00, meses: 34, juros: 26676.97, montante: 106676.97 },
+            { data: '30/06/2022', valor: 50000.00, meses: 29, juros: 13910.35, montante: 63910.35 },
+            { data: '26/10/2022', valor: 50000.00, meses: 25, juros: 11782.80, montante: 61782.80 },
+            { data: '26/01/2023', valor: 50000.00, meses: 22, juros: 10233.74, montante: 60233.74 },
+            { data: '20/03/2023', valor: 100000.00, meses: 20, juros: 18445.36, montante: 118445.36 },
+            { data: '02/08/2023', valor: 50000.00, meses: 15, juros: 6768.65, montante: 56768.65 },
+            { data: '15/11/2023', valor: 100000.00, meses: 12, juros: 10690.62, montante: 110690.62 },
+            { data: '14/01/2024', valor: 100000.00, meses: 10, juros: 8832.61, montante: 108832.61 },
+            { data: '20/03/2024', valor: 350000.00, meses: 8, juros: 24520.22, montante: 374520.22 },
+            { data: '11/09/2024', valor: 500000.00, meses: 2, juros: 8536.13, montante: 508536.13 }
+        ];
+
+        const formatarMoeda = (valor) => {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        };
+
+        // Calcular totais
+        const totais = aportes.reduce((acc, curr) => ({
+            aportes: acc.aportes + curr.valor,
+            juros: acc.juros + curr.juros,
+            montante: acc.montante + curr.montante
+        }), { aportes: 0, juros: 0, montante: 0 });
+
+        // Preencher cards de resumo
+        document.getElementById('totalAportes').textContent = formatarMoeda(totais.aportes);
+        document.getElementById('totalJuros').textContent = formatarMoeda(totais.juros);
+        document.getElementById('montanteTotal').textContent = formatarMoeda(totais.montante);
+
+        // Preencher tabela
+        const tabelaAportes = document.getElementById('aportesTable');
+        aportes.forEach(aporte => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${aporte.data}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-blue-600">${formatarMoeda(aporte.valor)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right">${aporte.meses}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">${formatarMoeda(aporte.juros)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-indigo-600">${formatarMoeda(aporte.montante)}</td>
+            `;
+            tabelaAportes.appendChild(tr);
+        });
+
+        // Criar dados para o gráfico de evolução
+        let valorAcumulado = 0;
+        let jurosAcumulado = 0;
+        const dadosEvolucao = aportes.map(aporte => {
+            valorAcumulado += aporte.valor;
+            jurosAcumulado += aporte.juros;
+            return {
+                data: aporte.data,
+                aportes: valorAcumulado,
+                juros: jurosAcumulado,
+                montante: valorAcumulado + jurosAcumulado
+            };
+        });
+
+        // Gráfico de evolução
+        new Chart(document.getElementById('evolucaoChart'), {
+            type: 'line',
+            data: {
+                labels: dadosEvolucao.map(d => d.data),
+                datasets: [
+                    {
+                        label: 'Aportes Acumulados',
+                        data: dadosEvolucao.map(d => d.aportes),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true
+                    },
+                    {
+                        label: 'Juros Acumulados',
+                        data: dadosEvolucao.map(d => d.juros),
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true
+                    },
+                    {
+                        label: 'Montante Total',
+                        data: dadosEvolucao.map(d => d.montante),
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatarMoeda(value);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatarMoeda(context.raw)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
